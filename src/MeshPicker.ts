@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 const _v2A = new THREE.Vector2;
 
-export class MaterialPicker {
+export class MeshPicker {
   public readonly renderer: THREE.WebGLRenderer;
   public scene?: THREE.Scene | null;
   public camera?: THREE.Camera | null;
@@ -19,7 +19,7 @@ export class MaterialPicker {
     this._prepareRenderTarget();
   }
 
-  public pick( x: number, y: number ): THREE.Material | null {
+  public pick( x: number, y: number ): THREE.Mesh | null {
     const { renderer, scene, camera } = this;
     if ( scene == null || camera == null ) {
       throw new Error( 'You must set scene and camera before pick a material' );
@@ -31,41 +31,27 @@ export class MaterialPicker {
     renderer.setRenderTarget( renderTarget );
 
     // replace materials
-    const originalTempMap = new Map<THREE.Material, THREE.Material>();
-    const tempOriginalMap = new Map<THREE.Material, THREE.Material>();
-    const idOriginalMap = new Map<number, THREE.Material>();
+    const meshMaterialMap = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+    const idMeshMap = new Map<number, THREE.Mesh>();
     let id = 1;
 
     scene.traverseVisible( ( object ) => {
       if ( ( object as any ).isMesh ) {
         const mesh = object as THREE.Mesh;
         const materialOrArray = mesh.material;
+        meshMaterialMap.set( mesh, materialOrArray );
+
         if ( Array.isArray( materialOrArray ) ) {
           mesh.material = materialOrArray.map( ( material ) => {
-            let temp = originalTempMap.get( material );
-            if ( !temp ) {
-              temp = this._createTempMaterial( material, id );
-
-              originalTempMap.set( material, temp );
-              tempOriginalMap.set( temp, material );
-              idOriginalMap.set( id, material );
-              id ++;
-            }
-            return temp;
+            return this._createTempMaterial( material, id );
           } );
         } else {
           const material = materialOrArray;
-          let temp = originalTempMap.get( material );
-          if ( !temp ) {
-            temp = this._createTempMaterial( material, id );
-
-            originalTempMap.set( material, temp );
-            tempOriginalMap.set( temp, material );
-            idOriginalMap.set( id, material );
-            id ++;
-          }
-          mesh.material = temp;
+          mesh.material = this._createTempMaterial( material, id );
         }
+
+        idMeshMap.set( id, mesh );
+        id ++;
       }
     } );
 
@@ -76,14 +62,9 @@ export class MaterialPicker {
     scene.traverse( ( object ) => {
       if ( ( object as any ).isMesh ) {
         const mesh = object as THREE.Mesh;
-        const materialOrArray = mesh.material;
-        if ( Array.isArray( materialOrArray ) ) {
-          mesh.material = materialOrArray.map( ( temp ) => {
-            return tempOriginalMap.get( temp )!;
-          } );
-        } else {
-          const temp = materialOrArray;
-          mesh.material = tempOriginalMap.get( temp )!;
+        const materialOrArray = meshMaterialMap.get( mesh );
+        if ( materialOrArray ) {
+          mesh.material = materialOrArray;
         }
       }
     } );
@@ -106,7 +87,7 @@ export class MaterialPicker {
       ( this._readPixelsBuffer[ 1 ] << 8 ) +
       this._readPixelsBuffer[ 2 ]
     );
-    return idOriginalMap.get( pickedId ) ?? null;
+    return idMeshMap.get( pickedId ) ?? null;
   }
 
   private _prepareRenderTarget(): THREE.WebGLRenderTarget {

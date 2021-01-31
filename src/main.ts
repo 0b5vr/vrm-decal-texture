@@ -3,7 +3,7 @@ import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import CameraControls from 'camera-controls';
 import { VRM } from '@pixiv/three-vrm';
 import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm';
-import { MaterialPicker } from './MaterialPicker';
+import { MeshPicker } from './MeshPicker';
 import uvGridPng from './assets/uv-grid.png';
 import { replaceMaterial } from './replaceMaterial';
 
@@ -74,32 +74,44 @@ async function loadVRM( url: string ): Promise<GLTF | VRM> {
 loadVRM( threeVrmGirlVrm );
 
 // == material picker ==============================================================================
-const materialPicker = new MaterialPicker( renderer );
-materialPicker.scene = scene;
-materialPicker.camera = camera;
+const meshPicker = new MeshPicker( renderer );
+meshPicker.scene = scene;
+meshPicker.camera = camera;
 
-const mapSelectedOverride = new THREE.TextureLoader().load( uvGridPng );
-const materialSelectedOverride = new THREE.MeshBasicMaterial( { map: mapSelectedOverride } );
+// == select mesh ==================================================================================
+const textureSelectedOverride = new THREE.TextureLoader().load( uvGridPng );
+const materialSelectedOverride = new THREE.MeshBasicMaterial( { map: textureSelectedOverride } );
 
-let prevMaterial: THREE.Material | null | undefined;
+let selectedMesh: THREE.Mesh | null | undefined;
+let selectedMeshOriginalMaterial: THREE.Material | THREE.Material[] | null | undefined;
 
-function unselectMaterial(): void {
-  if ( currentVRM == null || prevMaterial == null ) { return; }
-  replaceMaterial( currentVRM.scene, materialSelectedOverride, prevMaterial );
+function unselectMesh(): void {
+  if (
+    currentVRM == null ||
+    selectedMesh == null ||
+    selectedMeshOriginalMaterial == null
+  ) { return; }
+
+  selectedMesh.material = selectedMeshOriginalMaterial;
+
+  selectedMesh = null;
+  selectedMeshOriginalMaterial = null;
 }
 
-function selectMaterial( material: THREE.Material ): void {
+function selectMesh( mesh: THREE.Mesh ): void {
   if ( currentVRM == null ) { return; }
 
-  if ( prevMaterial ) {
-    unselectMaterial();
+  if ( selectedMesh != null ) {
+    unselectMesh();
   }
 
-  prevMaterial = material;
-  const count = replaceMaterial( currentVRM.scene, material, materialSelectedOverride );
+  selectedMesh = mesh;
+  selectedMeshOriginalMaterial = mesh.material;
 
-  if ( count === 0 ) {
-    prevMaterial = null;
+  if ( Array.isArray( mesh.material ) ) {
+    mesh.material = mesh.material.map( () => materialSelectedOverride );
+  } else {
+    mesh.material = materialSelectedOverride;
   }
 }
 
@@ -142,10 +154,10 @@ canvas.addEventListener( 'mousemove', () => {
 
 canvas.addEventListener( 'mouseup', ( event ) => {
   if ( !haveDragged ) {
-    const material = materialPicker.pick( event.clientX, event.clientY );
+    const mesh = meshPicker.pick( event.clientX, event.clientY );
 
-    if ( material ) {
-      selectMaterial( material );
+    if ( mesh ) {
+      selectMesh( mesh );
     }
   }
 } );
