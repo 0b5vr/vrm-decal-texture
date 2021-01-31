@@ -33,6 +33,7 @@ canvas.height = height;
 const renderer = new THREE.WebGLRenderer( {
   canvas,
   alpha: true,
+  antialias: true,
 } );
 
 // == camera =======================================================================================
