@@ -3,6 +3,10 @@
 <title>vrm-decal-texture</title>
 
 <style>
+  * {
+    box-sizing: border-box;
+  }
+
   body {
     margin: 0;
     padding: 0;
@@ -13,11 +17,59 @@
     width: 100%;
     height: 100%;
   }
+
+  #divUI {
+    position: fixed;
+    left: 8px;
+    top: 8px;
+  }
+
+  #divDraggable {
+    position: fixed;
+    left: 128px;
+    top: 128px;
+    width: 128px;
+    height: 128px;
+    border: solid 1px #f00;
+    cursor: move;
+    background-image: url( ./assets/uv-grid.png );
+    background-size: contain;
+  }
+
+  .imageHandles {
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    border: solid 1px #f00;
+  }
+
+  #divImageHandleNW {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    cursor: nwse-resize;
+  }
+
+  #divImageHandleSE {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    cursor: nwse-resize;
+  }
 </style>
 
 <body>
   <div id="divContainer">
     <canvas id="canvas"></canvas>
+    <div id="divDraggable">
+      <div id="divImageHandleNW" class="imageHandles"></div>
+      <div id="divImageHandleSE" class="imageHandles"></div>
+    </div>
+    <div id="divUI">
+      <input id="inputTextureWidth" type="number" value="1024" /> Texture Width<br />
+      <input id="inputTextureHeight" type="number" value="1024" /> Texture Height<br />
+      <input id="buttonExport" type="button" value="Export" /><br />
+    </div>
   </div>
 </body>
 
