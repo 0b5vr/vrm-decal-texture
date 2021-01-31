@@ -1,7 +1,10 @@
 module.exports = {
   "root": true,
 
-  "plugins": [ "@typescript-eslint" ],
+  "plugins": [
+    "sort-imports-es6-autofix",
+    "@typescript-eslint"
+  ],
 
   "env": {
     "browser": true,
@@ -32,7 +35,7 @@ module.exports = {
       "ignoreTemplateLiterals": true, // templates are also okay
       "ignoreRegExpLiterals": true, // regexs are also okay too
     } ],
-    "sort-imports": [ "error" ], // imports have to be ordered
+    "sort-imports-es6-autofix/sort-imports-es6": [ "error" ], // imports have to be ordered
     "eol-last": [ "error", "always" ], // eof newline is cool
 
     // variables
