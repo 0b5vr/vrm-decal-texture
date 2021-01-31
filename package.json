@@ -6,7 +6,7 @@
   "private": false,
   "scripts": {
     "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html",
+    "build": "parcel build src/index.html --public-url ./",
     "lint": "eslint \"src/**/*.ts\"",
     "lint-fix": "eslint --fix \"src/**/*.ts\""
   },
