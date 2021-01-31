@@ -23,7 +23,14 @@ const renderer = new THREE.WebGLRenderer( {
 } );
 
 // == camera =======================================================================================
-const camera = new THREE.PerspectiveCamera( 30, width / height, 0.1, 20.0 );
+const camera = new THREE.OrthographicCamera(
+  -2.5 / height * width,
+  2.5 / height * width,
+  2.5,
+  -2.5,
+  0.1,
+  100.0
+);
 camera.position.set( 0.0, 1.0, 5.0 );
 
 const controls = new CameraControls( camera, canvas );
@@ -145,7 +152,11 @@ canvas.addEventListener( 'mouseup', ( event ) => {
 
 // == resize handler ===============================================================================
 window.addEventListener( 'resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const height = camera.top - camera.bottom;
+  const xCenter = 0.5 * ( camera.left + camera.right );
+  const hw = 0.5 * height * window.innerWidth / window.innerHeight;
+  camera.left = xCenter - hw;
+  camera.right = xCenter + hw;
   camera.updateProjectionMatrix();
 
   renderer.setSize( window.innerWidth, window.innerHeight );
