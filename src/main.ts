@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import CameraControls from 'camera-controls';
-import { VRM } from '@pixiv/three-vrm';
-import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm';
 import { MeshPicker } from './MeshPicker';
-import uvGridPng from './assets/uv-grid.png';
-import { registerMouseEvent } from './registerMouseEvent';
+import { VRM } from '@pixiv/three-vrm';
 import { getImageSize } from './getImageSize';
+import { registerMouseEvent } from './registerMouseEvent';
+import CameraControls from 'camera-controls';
+import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm';
+import uvGridPng from './assets/uv-grid.png';
 
 // esm please
 CameraControls.install( { THREE } );
@@ -162,7 +162,7 @@ function update(): void {
 update();
 
 // == draggable image ==============================================================================
-let imageRect = { x: 128, y: 128, w: 128, h: 128 };
+const imageRect = { x: 128, y: 128, w: 128, h: 128 };
 let imageAspect = 1.0;
 
 function updateImageTransform(): void {
@@ -182,7 +182,7 @@ divDraggable.addEventListener( 'mousedown', ( event ) => {
       imageRect.y += y;
       updateImageTransform();
     }
-  )
+  );
 } );
 
 divImageHandleNW.addEventListener( 'mousedown', ( event ) => {
@@ -198,7 +198,7 @@ divImageHandleNW.addEventListener( 'mousedown', ( event ) => {
       imageRect.h -= v / imageAspect;
       updateImageTransform();
     }
-  )
+  );
 } );
 
 divImageHandleSE.addEventListener( 'mousedown', ( event ) => {
@@ -212,7 +212,7 @@ divImageHandleSE.addEventListener( 'mousedown', ( event ) => {
       imageRect.h += v / imageAspect;
       updateImageTransform();
     }
-  )
+  );
 } );
 
 // == map and export ===============================================================================
