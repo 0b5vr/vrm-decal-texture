@@ -3,15 +3,13 @@ import { DraggableImageOverlay } from './DraggableImageOverlay';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { MeshPicker } from './MeshPicker';
 import { VRM } from '@pixiv/three-vrm';
+import { exportDecalTexture } from './exportDecalTexture';
+import { textureUVGrid } from './textureUVGrid';
 import CameraControls from 'camera-controls';
 import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm';
-import uvGridPng from './assets/uv-grid.png';
 
 // esm please
 CameraControls.install( { THREE } );
-
-// == temp vars ====================================================================================
-const _v2A = new THREE.Vector2();
 
 // == dom ==========================================================================================
 const canvas = document.getElementById( 'canvas' ) as HTMLCanvasElement;
@@ -97,7 +95,6 @@ meshPicker.scene = scene;
 meshPicker.camera = camera;
 
 // == select mesh ==================================================================================
-const textureUVGrid = new THREE.TextureLoader().load( uvGridPng );
 const materialSelectedOverride = new THREE.MeshBasicMaterial( { map: textureUVGrid } );
 
 let selectedMesh: THREE.Mesh | null | undefined;
@@ -162,83 +159,6 @@ update();
 // == draggable image ==============================================================================
 const draggableImageOverlay = new DraggableImageOverlay( divContainer );
 
-// == map and export ===============================================================================
-const v4DecalRect = new THREE.Vector4();
-
-const mapMaterial = new THREE.MeshBasicMaterial( { map: textureUVGrid } );
-mapMaterial.onBeforeCompile = ( shader ) => {
-  shader.uniforms.decalRect = new THREE.Uniform( v4DecalRect );
-
-  shader.vertexShader = 'uniform vec4 decalRect;\n' + shader.vertexShader;
-  shader.vertexShader = shader.vertexShader.replace(
-    '#include <project_vertex>',
-    `
-#include <project_vertex>
-
-vec4 p = gl_Position;
-
-gl_Position = vec4( vUv * 2.0 - 1.0, 0.0, 1.0 );
-gl_Position.y = -gl_Position.y;
-vUv = 0.5 + 0.5 * p.xy / p.w;
-vUv = ( vUv - decalRect.xy ) / ( decalRect.zw - decalRect.xy );
-vUv.y = 1.0 - vUv.y;
-    `
-  );
-
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <map_fragment>',
-    `
-if ( vUv.x < 0.0 || 1.0 < vUv.x || vUv.y < 0.0 || 1.0 < vUv.y ) {
-  discard;
-}
-
-#include <map_fragment>
-    `
-  );
-};
-
-function mapAndExport(): void {
-  if ( !selectedMesh ) {
-    return;
-  }
-
-  renderer.getSize( _v2A );
-  const prevWidth = _v2A.x;
-  const prevHeight = _v2A.y;
-  renderer.setSize( parseInt( inputTextureWidth.value ), parseInt( inputTextureHeight.value ) );
-
-  const imageRect = draggableImageOverlay.rect;
-
-  v4DecalRect.set(
-    imageRect.x / window.innerWidth,
-    1.0 - imageRect.y / window.innerHeight,
-    ( imageRect.w + imageRect.x ) / window.innerWidth,
-    1.0 - ( imageRect.h + imageRect.y ) / window.innerHeight
-  );
-
-  renderer.compile( scene, camera );
-  renderer.clear();
-  renderer.renderBufferDirect(
-    camera,
-    scene,
-    selectedMesh!.geometry,
-    mapMaterial,
-    selectedMesh!,
-    selectedMesh!.geometry.groups[ 0 ] ?? null
-  );
-
-  canvas.toBlob( ( blob ) => {
-    const url = URL.createObjectURL( blob! );
-    const a = document.createElement( 'a' );
-    a.download = `${ Date.now() }`;
-    a.href = url;
-    a.click();
-    URL.revokeObjectURL( url );
-
-    renderer.setSize( prevWidth, prevHeight );
-  } );
-}
-
 // == click handler ================================================================================
 let haveDragged = false;
 
@@ -280,6 +200,9 @@ window.addEventListener( 'resize', () => {
 } );
 
 // == dnd handler ==================================================================================
+let currentVrmUrl: string | null = null;
+let currentImageUrl: string | null = null;
+
 window.addEventListener( 'dragover', ( event ) => {
   event.preventDefault();
 } );
@@ -291,27 +214,47 @@ window.addEventListener( 'drop', ( event ) => {
   if ( !file ) { return; }
 
   if ( file.name.endsWith( '.glb' ) || file.name.endsWith( '.vrm' ) ) {
+    if ( currentVrmUrl != null ) {
+      URL.revokeObjectURL( currentVrmUrl );
+    }
+
     // read given file then convert it to blob url
     const blob = new Blob( [ file ], { type: 'application/octet-stream' } );
-    const url = URL.createObjectURL( blob );
-    loadVRM( url );
+    currentVrmUrl = URL.createObjectURL( blob );
+
+    loadVRM( currentVrmUrl );
   } else {
+    if ( currentImageUrl != null ) {
+      URL.revokeObjectURL( currentImageUrl );
+    }
+
     // assuming it's an image
     const blob = new Blob( [ file ], { type: 'application/octet-stream' } );
-    const url = URL.createObjectURL( blob );
+    currentImageUrl = URL.createObjectURL( blob );
 
-    draggableImageOverlay.loadImage( url );
-
-    const prevMap = mapMaterial.map;
-    mapMaterial.map = new THREE.TextureLoader().load( url, () => {
-      if ( prevMap ) {
-        prevMap.dispose();
-      }
-    } );
+    draggableImageOverlay.loadImage( currentImageUrl );
   }
 } );
 
 // == ui handler ===================================================================================
 buttonExport.addEventListener( 'click', () => {
-  mapAndExport();
+  if ( selectedMesh == null ) {
+    throw new Error( 'Please select a mesh first!' );
+  }
+
+  if ( currentImageUrl == null ) {
+    throw new Error( 'Please set an image first!' );
+  }
+
+  exportDecalTexture( {
+    canvas,
+    renderer,
+    camera,
+    scene,
+    mesh: selectedMesh,
+    width: parseInt( inputTextureWidth.value ),
+    height: parseInt( inputTextureHeight.value ),
+    rect: draggableImageOverlay.rect,
+    imageUrl: currentImageUrl,
+  } );
 } );
