@@ -280,7 +280,7 @@ function mapAndExport(): void {
   );
 
   canvas.toBlob( ( blob ) => {
-    const url = URL.createObjectURL( blob );
+    const url = URL.createObjectURL( blob! );
     const a = document.createElement( 'a' );
     a.download = `${ Date.now() }`;
     a.href = url;
