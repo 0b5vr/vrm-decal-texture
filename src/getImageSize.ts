@@ -1,3 +1,9 @@
+/**
+ * Give me an image URL and I'll tell you the resolution of the image.
+ *
+ * @param url The image url
+ * @returns An object contains `width` and `height`
+ */
 export async function getImageSize( url: string ): Promise<{
   width: number,
   height: number

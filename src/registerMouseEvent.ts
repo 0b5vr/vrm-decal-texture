@@ -1,3 +1,26 @@
+/**
+ * Register a pair of one-off `mousemove` / `mouseup` events.
+ *
+ * @example
+ * ```ts
+ * div.addEventListener( 'mousedown', ( event ) => {
+ *   event.preventDefault();
+ *   event.stopPropagation();
+ *
+ *   registerMouseEvent(
+ *     ( event, { x, y } ) => {
+ *       console.log( 'move', x, y );
+ *     },
+ *     ( event, { x, y } ) => {
+ *       console.log( 'up', x, y );
+ *     },
+ *   );
+ * } );
+ * ```
+ *
+ * @param move A callback executed when the mouse is moved
+ * @param up A callback executed when the mouse is released
+ */
 export function registerMouseEvent(
   move: ( event: MouseEvent, movementSum: { x: number; y: number } ) => void,
   up?: ( event: MouseEvent ) => void

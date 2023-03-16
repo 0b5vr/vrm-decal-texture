@@ -2,6 +2,22 @@ import * as THREE from 'three';
 
 const _v2A = new THREE.Vector2;
 
+/**
+ * A Three.js utility to pick a mesh.
+ *
+ * It internally uses a offscreen render target and a custom shader to pick a mesh.
+ *
+ * @example
+ * ```ts
+ * const meshPicker = new MeshPicker( renderer );
+ * meshPicker.scene = scene;
+ * meshPicker.camera = camera;
+ *
+ * canvas.addEventListener( 'mousedown', ( event ) => {
+ *   const meshOrNull = meshPicker.pick( event.clientX, event.clientY );
+ * } );
+ * ```
+ */
 export class MeshPicker {
   public readonly renderer: THREE.WebGLRenderer;
   public scene?: THREE.Scene | null;
@@ -19,6 +35,15 @@ export class MeshPicker {
     this._prepareRenderTarget();
   }
 
+  /**
+   * Cast a ray toward the given screen coordinate and pick a mesh.
+   *
+   * If it fails to pick a mesh, it will return `null` instead.
+   *
+   * @param x `MouseEvent.clientX` would be appropriate
+   * @param y `MouseEvent.clientY` would be appropriate
+   * @returns A mesh under the given coordinate. If there is no mesh at the coordinate, it will return `null` instead
+   */
   public pick( x: number, y: number ): THREE.Mesh | null {
     const { renderer, scene, camera } = this;
     if ( scene == null || camera == null ) {
