@@ -35,7 +35,7 @@
     text-align: right;
   }
 
-  #divDraggable {
+  .draggableBody {
     position: fixed;
     left: 128px;
     top: 128px;
@@ -47,21 +47,21 @@
     background-size: contain;
   }
 
-  .imageHandles {
+  .draggableHandle {
     width: 8px;
     height: 8px;
     background: #fff;
     border: solid 1px #f00;
   }
 
-  #divImageHandleNW {
+  .draggableHandleNW {
     position: absolute;
     left: -4px;
     top: -4px;
     cursor: nwse-resize;
   }
 
-  #divImageHandleSE {
+  .draggableHandleSE {
     position: absolute;
     right: -4px;
     bottom: -4px;
@@ -72,10 +72,6 @@
 <body>
   <div id="divContainer">
     <canvas id="canvas"></canvas>
-    <div id="divDraggable">
-      <div id="divImageHandleNW" class="imageHandles"></div>
-      <div id="divImageHandleSE" class="imageHandles"></div>
-    </div>
     <div id="divUI">
       <input id="inputTextureWidth" class="inputTextureSize" value="1024" /> Texture Width<br />
       <input id="inputTextureHeight" class="inputTextureSize" value="1024" /> Texture Height<br />

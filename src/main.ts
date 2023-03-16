@@ -1,9 +1,8 @@
 import * as THREE from 'three';
+import { DraggableImageOverlay } from './DraggableImageOverlay';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { MeshPicker } from './MeshPicker';
 import { VRM } from '@pixiv/three-vrm';
-import { getImageSize } from './getImageSize';
-import { registerMouseEvent } from './registerMouseEvent';
 import CameraControls from 'camera-controls';
 import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm';
 import uvGridPng from './assets/uv-grid.png';
@@ -16,9 +15,7 @@ const _v2A = new THREE.Vector2();
 
 // == dom ==========================================================================================
 const canvas = document.getElementById( 'canvas' ) as HTMLCanvasElement;
-const divDraggable = document.getElementById( 'divDraggable' ) as HTMLDivElement;
-const divImageHandleNW = document.getElementById( 'divImageHandleNW' ) as HTMLDivElement;
-const divImageHandleSE = document.getElementById( 'divImageHandleSE' ) as HTMLDivElement;
+const divContainer = document.getElementById( 'divContainer' ) as HTMLDivElement;
 const inputTextureWidth = document.getElementById( 'inputTextureWidth' ) as HTMLInputElement;
 const inputTextureHeight = document.getElementById( 'inputTextureHeight' ) as HTMLInputElement;
 const buttonExport = document.getElementById( 'buttonExport' ) as HTMLInputElement;
@@ -163,58 +160,7 @@ function update(): void {
 update();
 
 // == draggable image ==============================================================================
-const imageRect = { x: 128, y: 128, w: 128, h: 128 };
-let imageAspect = 1.0;
-
-function updateImageTransform(): void {
-  divDraggable.style.left = `${ imageRect.x }px`;
-  divDraggable.style.top = `${ imageRect.y }px`;
-  divDraggable.style.width = `${ imageRect.w }px`;
-  divDraggable.style.height = `${ imageRect.h }px`;
-}
-
-divDraggable.addEventListener( 'mousedown', ( event ) => {
-  event.preventDefault();
-  event.stopPropagation();
-
-  registerMouseEvent(
-    ( event, { x, y } ) => {
-      imageRect.x += x;
-      imageRect.y += y;
-      updateImageTransform();
-    }
-  );
-} );
-
-divImageHandleNW.addEventListener( 'mousedown', ( event ) => {
-  event.preventDefault();
-  event.stopPropagation();
-
-  registerMouseEvent(
-    ( event, { x, y } ) => {
-      const v = ( x + y * imageAspect ) / 2;
-      imageRect.x += v;
-      imageRect.y += v / imageAspect;
-      imageRect.w -= v;
-      imageRect.h -= v / imageAspect;
-      updateImageTransform();
-    }
-  );
-} );
-
-divImageHandleSE.addEventListener( 'mousedown', ( event ) => {
-  event.preventDefault();
-  event.stopPropagation();
-
-  registerMouseEvent(
-    ( event, { x, y } ) => {
-      const v = ( x + y * imageAspect ) / 2;
-      imageRect.w += v;
-      imageRect.h += v / imageAspect;
-      updateImageTransform();
-    }
-  );
-} );
+const draggableImageOverlay = new DraggableImageOverlay( divContainer );
 
 // == map and export ===============================================================================
 const v4DecalRect = new THREE.Vector4();
@@ -260,6 +206,8 @@ function mapAndExport(): void {
   const prevWidth = _v2A.x;
   const prevHeight = _v2A.y;
   renderer.setSize( parseInt( inputTextureWidth.value ), parseInt( inputTextureHeight.value ) );
+
+  const imageRect = draggableImageOverlay.rect;
 
   v4DecalRect.set(
     imageRect.x / window.innerWidth,
@@ -351,13 +299,8 @@ window.addEventListener( 'drop', ( event ) => {
     // assuming it's an image
     const blob = new Blob( [ file ], { type: 'application/octet-stream' } );
     const url = URL.createObjectURL( blob );
-    divDraggable.style.backgroundImage = `url( ${ url } )`;
 
-    getImageSize( url ).then( ( { width, height } ) => {
-      imageAspect = width / height;
-      imageRect.w = imageRect.h * imageAspect;
-      updateImageTransform();
-    } );
+    draggableImageOverlay.loadImage( url );
 
     const prevMap = mapMaterial.map;
     mapMaterial.map = new THREE.TextureLoader().load( url, () => {
