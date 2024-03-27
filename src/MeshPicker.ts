@@ -35,15 +35,6 @@ export class MeshPicker {
     this._prepareRenderTarget();
   }
 
-  /**
-   * Cast a ray toward the given screen coordinate and pick a mesh.
-   *
-   * If it fails to pick a mesh, it will return `null` instead.
-   *
-   * @param x `MouseEvent.clientX` would be appropriate
-   * @param y `MouseEvent.clientY` would be appropriate
-   * @returns A mesh under the given coordinate. If there is no mesh at the coordinate, it will return `null` instead
-   */
   public pick( x: number, y: number ): THREE.Mesh | null {
     const { renderer, scene, camera } = this;
     if ( scene == null || camera == null ) {
@@ -149,16 +140,15 @@ export class MeshPicker {
     const material = new THREE.MeshBasicMaterial( {
       map: ( original as any ).map,
       alphaTest,
-      color: id,
+      color: new THREE.Color( id ).convertLinearToSRGB(),
     } );
     material.onBeforeCompile = ( shader ) => {
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
 #ifdef USE_MAP
-  vec4 texelColor = texture2D( map, vUv );
-  texelColor = mapTexelToLinear( texelColor );
-  diffuseColor.a *= texelColor.a;
+  vec4 sampledDiffuseColor = texture2D( map, vMapUv );
+  diffuseColor.a *= sampledDiffuseColor.a;
 #endif
         `
       );

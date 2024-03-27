@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { DraggableImageOverlay } from './DraggableImageOverlay';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { MeshPicker } from './MeshPicker';
-import { VRM } from '@pixiv/three-vrm';
+import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { exportDecalTexture } from './exportDecalTexture';
 import { textureUVGrid } from './textureUVGrid';
 import CameraControls from 'camera-controls';
-import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm';
+import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm?url';
 
 // esm please
 CameraControls.install( { THREE } );
@@ -56,35 +56,38 @@ controls.setTarget( 0.0, 1.0, 0.0 );
 const scene = new THREE.Scene();
 
 // == light ========================================================================================
-const light = new THREE.DirectionalLight( 0xffffff );
+const light = new THREE.DirectionalLight( 0xffffff, Math.PI );
 light.position.set( 1.0, 2.0, 3.0 ).normalize();
 scene.add( light );
 
 // == vrm ==========================================================================================
-let currentVRM: GLTF | VRM | null = null;
+let currentScene: THREE.Group | null = null;
 const gltfLoader = new GLTFLoader();
 
-async function loadVRM( url: string ): Promise<GLTF | VRM> {
+gltfLoader.register( ( parser ) => new VRMLoaderPlugin( parser ) );
+
+async function loadVRM( url: string ): Promise<void> {
+  if ( currentScene != null ) {
+    scene.remove( currentScene );
+    currentScene = null;
+  }
+
   const gltf = await gltfLoader.loadAsync( url );
-  const vrm = await VRM.from( gltf ).catch( ( error ) => {
-    console.error( error );
+  const vrm: VRM | null = gltf.userData.vrm;
+
+  if ( vrm == null ) {
     console.warn( 'Failed to load the model as a VRM. Fallbacking to GLTF' );
-    return null;
-  } );
+  }
 
   if ( vrm ) {
-    vrm.scene.rotation.y = Math.PI;
+    VRMUtils.rotateVRM0( vrm );
+
+    vrm.springBoneManager?.setInitState();
+    vrm.nodeConstraintManager?.setInitState();
   }
 
-  if ( currentVRM ) {
-    scene.remove( currentVRM.scene );
-    currentVRM = null;
-  }
-
-  currentVRM = vrm ?? gltf;
-  scene.add( currentVRM.scene );
-
-  return currentVRM;
+  currentScene = vrm?.scene ?? gltf.scene;
+  scene.add( currentScene );
 }
 
 loadVRM( threeVrmGirlVrm );
@@ -102,7 +105,6 @@ let selectedMeshOriginalMaterial: THREE.Material | THREE.Material[] | null | und
 
 function unselectMesh(): void {
   if (
-    currentVRM == null ||
     selectedMesh == null ||
     selectedMeshOriginalMaterial == null
   ) { return; }
@@ -114,8 +116,6 @@ function unselectMesh(): void {
 }
 
 function selectMesh( mesh: THREE.Mesh ): void {
-  if ( currentVRM == null ) { return; }
-
   if ( selectedMesh != null ) {
     unselectMesh();
   }
@@ -250,7 +250,6 @@ buttonExport.addEventListener( 'click', () => {
     canvas,
     renderer,
     camera,
-    scene,
     mesh: selectedMesh,
     width: parseInt( inputTextureWidth.value ),
     height: parseInt( inputTextureHeight.value ),
