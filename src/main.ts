@@ -7,6 +7,8 @@ import { exportDecalTexture } from './exportDecalTexture';
 import { textureUVGrid } from './textureUVGrid';
 import CameraControls from 'camera-controls';
 import threeVrmGirlVrm from './assets/models/three-vrm-girl.vrm?url';
+import { guiButtonCameraCenter, guiButtonCameraFront, guiButtonCameraReset, guiButtonExport, guiButtonImageCenter, guiInputCameraFov, guiInputCameraOrtho, guiParams } from './gui';
+import { CameraManager } from './CameraManager';
 
 // esm please
 CameraControls.install( { THREE } );
@@ -14,16 +16,10 @@ CameraControls.install( { THREE } );
 // == dom ==========================================================================================
 const canvas = document.getElementById( 'canvas' ) as HTMLCanvasElement;
 const divContainer = document.getElementById( 'divContainer' ) as HTMLDivElement;
-const inputTextureWidth = document.getElementById( 'inputTextureWidth' ) as HTMLInputElement;
-const inputTextureHeight = document.getElementById( 'inputTextureHeight' ) as HTMLInputElement;
-const buttonExport = document.getElementById( 'buttonExport' ) as HTMLInputElement;
 
 // == renderer =====================================================================================
-const width = window.innerWidth;
-const height = window.innerHeight;
-
-canvas.width = width;
-canvas.height = height;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 const renderer = new THREE.WebGLRenderer( {
   canvas,
@@ -32,25 +28,7 @@ const renderer = new THREE.WebGLRenderer( {
 } );
 
 // == camera =======================================================================================
-let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
-camera = new THREE.OrthographicCamera(
-  -2.5 / height * width,
-  2.5 / height * width,
-  2.5,
-  -2.5,
-  0.1,
-  100.0,
-);
-camera = new THREE.PerspectiveCamera(
-  30.0,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  100.0,
-);
-camera.position.set( 0.0, 1.0, 5.0 );
-
-const controls = new CameraControls( camera, canvas );
-controls.setTarget( 0.0, 1.0, 0.0 );
+const cameraManager = new CameraManager( renderer );
 
 // == scene ========================================================================================
 const scene = new THREE.Scene();
@@ -95,7 +73,11 @@ loadVRM( threeVrmGirlVrm );
 // == material picker ==============================================================================
 const meshPicker = new MeshPicker( renderer );
 meshPicker.scene = scene;
-meshPicker.camera = camera;
+meshPicker.camera = cameraManager.camera;
+
+cameraManager.cameraChangeObservers.add( () => {
+  meshPicker.camera = cameraManager.camera;
+} );
 
 // == select mesh ==================================================================================
 const materialSelectedOverride = new THREE.MeshBasicMaterial( { map: textureUVGrid } );
@@ -148,9 +130,9 @@ const clock = new THREE.Clock();
 
 function update(): void {
   const delta = clock.getDelta();
-  controls.update( delta );
+  cameraManager.controls.update( delta );
 
-  renderer.render( scene, camera );
+  renderer.render( scene, cameraManager.camera );
 
   requestAnimationFrame( update );
 }
@@ -182,21 +164,11 @@ canvas.addEventListener( 'mouseup', ( event ) => {
 
 // == resize handler ===============================================================================
 window.addEventListener( 'resize', () => {
-  if ( ( camera as any ).isOrthographicCamera ) {
-    const ortho = camera as THREE.OrthographicCamera;
-    const height = ortho.top - ortho.bottom;
-    const xCenter = 0.5 * ( ortho.left + ortho.right );
-    const hw = 0.5 * height * window.innerWidth / window.innerHeight;
-    ortho.left = xCenter - hw;
-    ortho.right = xCenter + hw;
-  } else {
-    const persp = camera as THREE.PerspectiveCamera;
-    persp.aspect = window.innerWidth / window.innerHeight;
-  }
+  const width = window.innerWidth;
+  const height = window.innerHeight;
 
-  camera.updateProjectionMatrix();
-
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.setSize( width, height );
+  cameraManager.handleResize( width, height );
 } );
 
 // == dnd handler ==================================================================================
@@ -237,22 +209,40 @@ window.addEventListener( 'drop', ( event ) => {
 } );
 
 // == ui handler ===================================================================================
-buttonExport.addEventListener( 'click', () => {
+guiButtonCameraFront.on( 'click', () => cameraManager.front() );
+guiButtonCameraCenter.on( 'click', () => cameraManager.center() );
+guiButtonCameraReset.on( 'click', () => cameraManager.reset() );
+
+guiInputCameraFov.on( 'change', ( { value } ) => {
+  cameraManager.changeFov( value );
+} );
+
+guiInputCameraOrtho.on( 'change', ( { value } ) => {
+  cameraManager.changeCamera( value );
+} );
+
+guiButtonImageCenter.on( 'click', () => draggableImageOverlay.center() );
+
+guiButtonExport.on( 'click', () => {
   if ( selectedMesh == null ) {
-    throw new Error( 'Please select a mesh first!' );
+    const message = 'Please select a mesh first!';
+    alert( message );
+    throw new Error( message );
   }
 
   if ( currentImageUrl == null ) {
-    throw new Error( 'Please set an image first!' );
+    const message = 'Please set an image first!';
+    alert( message );
+    throw new Error( message );
   }
 
   exportDecalTexture( {
     canvas,
     renderer,
-    camera,
+    camera: cameraManager.camera,
     mesh: selectedMesh,
-    width: parseInt( inputTextureWidth.value ),
-    height: parseInt( inputTextureHeight.value ),
+    width: guiParams.textureWidth,
+    height: guiParams.textureHeight,
     rect: draggableImageOverlay.rect,
     imageUrl: currentImageUrl,
   } );

@@ -65,6 +65,12 @@ export class DraggableImageOverlay {
     } );
   }
 
+  public center(): void {
+    this.__rect.x = ( this.__divContainer.clientWidth - this.__rect.w ) / 2;
+
+    this.__updateImageTransform();
+  }
+
   private __updateImageTransform(): void {
     this.__divBody.style.left = `${ this.__rect.x }px`;
     this.__divBody.style.top = `${ this.__rect.y }px`;
